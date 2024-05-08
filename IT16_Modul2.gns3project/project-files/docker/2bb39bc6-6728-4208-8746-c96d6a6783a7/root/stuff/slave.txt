@@ -1,0 +1,25 @@
+//
+// Do any local configuration here
+//
+
+// Consider adding the 1918 zones here, if they are not used in your
+// organization
+//include "/etc/bind/zones.rfc1918";
+
+zone "airdrop.it16.com" {
+	type slave;
+	masters { 192.241.1.2; };
+	file "/var/lib/bind/airdrop.it16.com";
+};
+
+zone "redzone.it16.com" {
+	type slave;
+	masters { 192.241.1.2; };
+	file "/var/lib/bind/redzone.it16.com";
+};
+
+zone "loot.it16.com" {
+	type slave;
+	masters { 192.241.1.2; };
+	file "/var/lib/bind/loot.it16.com";
+};

@@ -1,0 +1,28 @@
+//
+// Do any local configuration here
+//
+
+// Consider adding the 1918 zones here, if they are not used in your
+// organization
+//include "/etc/bind/zones.rfc1918";
+
+zone "airdrop.it16.com" {
+	type master;
+	also-notify { 192.241.3.2; };
+	allow-transfer { 192.241.3.2; };
+	file "/etc/bind/airdrop/airdrop.it16.com";
+};
+
+zone "redzone.it16.com" {
+	type master;
+	also-notify { 192.241.3.2; };
+	allow-transfer { 192.241.3.2; };
+	file "/etc/bind/redzone/redzone.it16.com";
+};
+
+zone "loot.it16.com" {
+	type master;
+	also-notify { 192.241.3.2; };
+	allow-transfer { 192.241.3.2; };
+	file "/etc/bind/loot/loot.it16.com";
+};

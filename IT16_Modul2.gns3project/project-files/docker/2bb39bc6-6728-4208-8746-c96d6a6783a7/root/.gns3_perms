@@ -1,0 +1,16 @@
+644:0:0:/root/siren.sh
+755:0:0:/root/.nano
+644:0:0:/root/.gns3_perms
+644:0:0:/root/slave.sh
+644:0:0:/root/options.sh
+644:0:0:/root/stuff/slave.txt
+644:0:0:/root/stuff/options.txt
+644:0:0:/root/stuff/log.siren.redzone.it16.com
+644:0:0:/root/stuff/siren.redzone.it16.com
+755:0:0:/root/stuff
+644:0:0:/root/.profile
+644:0:0:/root/logsiren.sh
+644:0:0:/root/script.sh
+644:0:0:/root/.bashrc
+600:0:0:/root/.bash_history
+700:0:0:/root
