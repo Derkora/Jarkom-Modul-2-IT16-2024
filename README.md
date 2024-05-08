@@ -102,6 +102,241 @@ dengan melakukan dns forwarding menggunakna IP Erangel
 
 ### Soal 12
 Karena pusat ingin sebuah website yang ingin digunakan untuk memantau kondisi markas lainnya maka deploy lah webiste ini (cek resource yg lb) pada severny menggunakan apache
+Buatlah script seperti ini
+```
+echo nameserver 192.241.4.2 > /etc/resolv.conf
+
+apt-get update
+
+apt-get install lynx
+apt-get install wget
+apt-get install apache2
+apt-get install unzip
+apt-get install php
+apt-get install libapache2-mod-php7.0
+
+service apache2 start
+
+wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=11S6CzcvLG-dB0ws1yp494IURnDvtIOcq'$wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1xn03kTB27K872cokqwEIlk8Zb121HnfB'$
+
+unzip dr-listing.zip -d dr-listing
+unzip lb.zip  -d  lb
+
+cp ./lb/worker/index.php /var/www/html/index.php
+```
+Script tersebut gunakan di semua webserver (Severny Stalber Lipovka)
+
+Install lynx di client menggunakan script
+```
+apt-get update
+apt-get install lynx
+```
+Lalu cek di client menggunakan command 
+``` lynx http://192.241.4.2/index.php ```
+
 
 ### Soal 13
+Tapi pusat merasa tidak puas dengan performanya karena traffic yag tinggi maka pusat meminta kita memasang load balancer pada web nya, dengan Severny, Stalber, Lipovka sebagai worker dan Mylta sebagai Load Balancer menggunakan apache sebagai web server nya dan load balancernya
+Gunakan script pada loadbalancernya seperti ini
+
+```
+<VirtualHost *:80>
+    <Proxy balancer://mycluster>
+      BalancerMember http://192.241.4.2:80
+      BalancerMember http://192.241.4.3:80
+      BalancerMember http://192.241.4.4:80
+    </Proxy>
+    ProxyPreserveHost On
+    ProxyPass / balancer://mycluster/
+    ProxyPassReverse / balancer://mycluster/
+</VirtualHost>
+```
+Jangan lupa mengikuti di modul dengan script berikut
+```
+a2enmod proxy
+a2enmod proxy_http
+a2enmod proxy_balancer
+
+cp loadBalance.conf /etc/apache2/sites-available/loadBalance.conf
+rm 000-default.conf
+
+a2ensite loadBalance.conf
+
+service apache2 restart
+```
+
+Lalu cek di client menggunakan command 
+```
+lynx http://192.241.4.3/index.php
+lynx http://192.241.4.4/index.php 
+```
+
+
+### Soal 14
+Mereka juga belum merasa puas jadi pusat meminta agar web servernya dan load balancer nya diubah menjadi nginx
+Setup worker dan myltanya
+```
+service apache2 stop
+upstream testbackend  {
+        server 192.241.4.2; #IP Severny
+        server 192.241.4.3; #IP Stalber
+        server 192.241.4.4; #IP Lipovka
+}
+
+server {
+        listen 80;
+        server_name mylta.it16.com www.mylta.it16.com;
+
+        location / {
+          proxy_pass http://testbackend;
+        }
+}
+
+service nginx start
+
+rm /etc/nginx/sites-enabled/default
+cp lb-jarkom /etc/nginx/sites-available/lb-jarkom
+
+ln -s /etc/nginx/sites-available/lb-jarkom /etc/nginx/sites-enabled/lb-jarkom
+
+service nginx restart
+```
+Setup workernya 
+```
+server {
+    listen 80;
+    root /var/www/jarkom;
+    index index.php index.html index.htm;
+    server_name tamat.it16.com www.tamat.it16.com;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location /worker2 {
+        index index.html;
+        autoindex on;
+        autoindex_exact_size off;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    error_log /var/log/nginx/jarkom_error.log;
+    access_log /var/log/nginx/jarkom_access.log;
+}
+
+service apache2 stop
+
+apt install php-fpm -y
+
+service php7.0-fpm start
+
+mkdir /var/www/jarkom
+
+cp ./lb/worker/index.php /var/www/jarkom/index.php
+
+rm /etc/nginx/sites-enabled/default
+
+cp defaultnginx /etc/nginx/sites-available/defaultnginx
+ln -s /etc/nginx/sites-available/defaultnginx /etc/nginx/sites-enabled/defaultnginx
+
+service nginx restart
+
+nginx -t
+```
+### Soal 15
+Analisa
+
+### Soal 16
+Karena dirasa kurang aman karena masih memakai IP, markas ingin akses ke mylta memakai mylta.xxx.com dengan alias www.mylta.xxx.com (sesuai web server terbaik hasil analisis kalian)
+Setup pochinki
+```
+echo 'zone "mylta.it16.com" {
+    type master;
+    file "/etc/bind/jarkom/mylta.it16.com";
+};' >> /etc/bind/named.conf.local
+
+echo ';
+; BIND data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     mylta.it16.com. root.mylta.it16.com. (
+                                2         ; Serial
+                                604800    ; Refresh
+                                86400     ; Retry
+                                2419200   ; Expire
+                                604800 )  ; Negative Cache TTL
+;
+@       IN      NS      mylta.it16.com.
+@       IN      A       192.241.4.5       ; IP Mylta
+www     IN      CNAME   mylta.it16.com.' > /etc/bind/jarkom/mylta.it16.com
+
+service bind9 restart
+```
+lalu test ping dan test lynx www.mylta.16.com
+
+### Soal 17
+Agar aman, buatlah konfigurasi agar mylta.xxx.com hanya dapat diakses melalui port 14000 dan 14400
+Caranya mirip" sama kayak yang nomer 16 tinggal mindah listennya aja
+```
+upstream myweb  {
+        server 192.241.4.2:80; #IP Severny
+        server 192.241.4.3:80; #IP Stalber
+        server 192.241.4.4:80; #IP Lipovka
+}
+
+server {
+        listen 14000;
+        server_name mylta.it16.com www.mylta.it16.com;
+
+        location / {
+          proxy_pass http://testbackend;
+        }
+}
+
+server {
+        listen 14400;
+        server_name mylta.it16.com www.mylta.it16.com;
+
+        location / {
+          proxy_pass http://testbackend;
+        }
+}
+
+server {
+    listen 80;
+    server_name mylta.it16.com www.mylta.it16.com;
+
+    return 404;
+}
+```
+Perlu atur konfigurasi lagi buat mengaktifkan seperti ini
+```
+service apache2 stop
+
+rm /etc/nginx/sites-enabled/lb-jarkom
+cp lb-jarkom-port /etc/nginx/sites-available/lb-jarkom-port
+
+ln -s /etc/nginx/sites-available/lb-jarkom-port /etc/nginx/sites-enabled/lb-jarkom-port
+
+service nginx restart
+```
+test pake ini  lynx mylta.it16.com:14000 dan lynx mylta.it16.com:14400
+
+### Soal 18
+Apa bila ada yang mencoba mengakses IP mylta akan secara otomatis dialihkan ke www.mylta.xxx.com
+
+### Soal 19
+Karena probset sudah kehabisan ide masuk ke salah satu worker buatkan akses direktori listing yang mengarah ke resource worker2
+
+### Soal 20
+Worker tersebut harus dapat di akses dengan tamat.xxx.com dengan alias www.tamat.xxx.com
+
 
